@@ -269,6 +269,19 @@ main {
   transition: var(--transition);
 }
 
+.msg .meta .dl-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.msg .meta .dl-btn:hover { background: var(--border); color: #fff; }
+
 .msg .meta .play-btn:hover { background: var(--accent-hover); }
 .msg .meta .play-btn.playing { background: var(--red); }
 .msg .meta .play-btn .spinner {
@@ -671,7 +684,7 @@ async function sendMessage() {
 
     if (audioData && audioData.length > 0) {
       state.history.push({ role: 'assistant', content: text, audio: audioData });
-      addPlayButton(metaEl, audioData);
+      addAudioButtons(metaEl, audioData, text);
     } else {
       metaEl.textContent = '⚠️ 未收到音频数据';
     }
@@ -823,12 +836,64 @@ function addMessage(role, text, isPlaceholder) {
   return el;
 }
 
-function addPlayButton(container, audioData) {
-  const btn = document.createElement('button');
-  btn.className = 'play-btn';
-  btn.textContent = '▶ 播放';
-  btn.addEventListener('click', () => togglePlay(btn, audioData));
-  container.appendChild(btn);
+function addAudioButtons(container, audioData, text) {
+  const playBtn = document.createElement('button');
+  playBtn.className = 'play-btn';
+  playBtn.innerHTML = '\u25B6 播放';
+  playBtn.addEventListener('click', () => togglePlay(playBtn, audioData));
+  container.appendChild(playBtn);
+
+  const dlBtn = document.createElement('button');
+  dlBtn.className = 'dl-btn';
+  dlBtn.innerHTML = '\u2B07 下载';
+  dlBtn.addEventListener('click', () => downloadWav(audioData, text));
+  container.appendChild(dlBtn);
+}
+
+function downloadWav(audioData, text) {
+  const sampleRate = 24000;
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * bitsPerSample / 8;
+  const blockAlign = numChannels * bitsPerSample / 8;
+  const dataSize = audioData.length * 2;
+
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  function writeStr(offset, str) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeStr(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  const int16 = new Int16Array(buffer, 44, audioData.length);
+  for (let i = 0; i < audioData.length; i++) {
+    const sample = Math.max(-1, Math.min(1, audioData[i]));
+    int16[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+  }
+
+  const blob = new Blob([buffer], { type: 'audio/wav' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mimo_${text.slice(0, 20).replace(/[\\/:*?\"<>|]/g, '_')}_${Date.now()}.wav`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // ── 音频播放 ──
