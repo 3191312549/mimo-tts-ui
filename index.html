@@ -71,6 +71,24 @@ header h1 span { color: var(--accent); }
 
 .api-key-wrap input:focus, .server-url-wrap input:focus { outline: none; border-color: var(--accent); }
 
+.api-key-wrap.warn input {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+  animation: pulse-warn 2s ease-in-out infinite;
+}
+@keyframes pulse-warn {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2); }
+  50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.4); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.api-key-wrap input.shake { animation: shake 0.4s ease-in-out; }
+
 .server-url-wrap {
   display: flex;
   align-items: center;
@@ -511,11 +529,21 @@ dom.apiKey.addEventListener('input', () => {
   state.apiKey = dom.apiKey.value.trim();
   saveState();
   updateStatus('idle');
+  updateApiKeyWarn();
 });
 
 dom.apiKey.addEventListener('blur', () => {
   if (state.apiKey.length > 20 && state.isProxy) checkApiKey();
 });
+
+function updateApiKeyWarn() {
+  const wrap = dom.apiKey.parentElement;
+  if (!state.apiKey) {
+    wrap.classList.add('warn');
+  } else {
+    wrap.classList.remove('warn');
+  }
+}
 
 dom.serverUrl.addEventListener('input', () => {
   state.serverUrl = dom.serverUrl.value.trim();
@@ -642,8 +670,10 @@ async function sendMessage() {
   const text = dom.textInput.value.trim();
   if (!text) return;
   if (!state.apiKey) {
-    alert('请先输入 API Key');
+    dom.apiKey.parentElement.classList.add('warn');
     dom.apiKey.focus();
+    dom.apiKey.classList.add('shake');
+    setTimeout(() => dom.apiKey.classList.remove('shake'), 500);
     return;
   }
   if (state.mode === 'clone' && !state.refAudioBase64) {
@@ -944,6 +974,7 @@ function togglePlay(btn, audioData) {
 state.voice = dom.voiceSelect.value;
 state.stream = true;
 loadState();
+updateApiKeyWarn();
 </script>
 </body>
 </html>
