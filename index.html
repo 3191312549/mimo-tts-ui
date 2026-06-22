@@ -109,6 +109,18 @@ header h1 span { color: var(--accent); }
 .status-dot.err { background: var(--red); }
 .status-dot.idle { background: #555; }
 
+.save-local {
+  font-size: 11px;
+  color: var(--text2);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.save-local input { margin: 0; }
+
 main {
   display: flex;
   flex: 1;
@@ -394,6 +406,7 @@ main {
   <div class="api-key-wrap">
     <div class="status-dot idle" id="statusDot" title="API 状态"></div>
     <input type="password" id="apiKey" placeholder="输入 API Key" autocomplete="off">
+    <label class="save-local" title="关闭后仍保留 API Key"><input type="checkbox" id="saveLocal" checked> 记住</label>
   </div>
 </header>
 
@@ -476,15 +489,25 @@ const state = {
   stream: true,
   apiKey: '',
   serverUrl: '',
+  saveLocal: true,
   audioContext: null,
   playingSource: null,
   history: []
 };
 
 // ── 持久化存储 ──
+function getStorage() {
+  return state.saveLocal ? localStorage : sessionStorage;
+}
 function loadState() {
   try {
-    const saved = JSON.parse(sessionStorage.getItem('mimo_state'));
+    // 保存偏好始终用 localStorage
+    const savedPref = JSON.parse(localStorage.getItem('mimo_pref'));
+    if (savedPref && savedPref.saveLocal !== undefined) {
+      state.saveLocal = savedPref.saveLocal;
+      dom.saveLocal.checked = state.saveLocal;
+    }
+    const saved = JSON.parse(getStorage().getItem('mimo_state'));
     if (saved) {
       if (saved.apiKey) { state.apiKey = saved.apiKey; dom.apiKey.value = saved.apiKey; }
       if (saved.serverUrl !== undefined) { state.serverUrl = saved.serverUrl; dom.serverUrl.value = saved.serverUrl; }
@@ -493,7 +516,8 @@ function loadState() {
 }
 function saveState() {
   try {
-    sessionStorage.setItem('mimo_state', JSON.stringify({
+    localStorage.setItem('mimo_pref', JSON.stringify({ saveLocal: state.saveLocal }));
+    getStorage().setItem('mimo_state', JSON.stringify({
       apiKey: state.apiKey,
       serverUrl: state.serverUrl
     }));
@@ -507,6 +531,7 @@ const $$ = (s, p) => [...(p || document).querySelectorAll(s)];
 const dom = {
   apiKey: $('#apiKey'),
   serverUrl: $('#serverUrl'),
+  saveLocal: $('#saveLocal'),
   statusDot: $('#statusDot'),
   modeTabs: $$('#modeTabs .mode-tab'),
   presetConfig: $('#presetConfig'),
@@ -534,6 +559,12 @@ dom.apiKey.addEventListener('input', () => {
 
 dom.apiKey.addEventListener('blur', () => {
   if (state.apiKey.length > 20 && state.isProxy) checkApiKey();
+});
+
+dom.saveLocal.addEventListener('change', () => {
+  state.saveLocal = dom.saveLocal.checked;
+  // 切换存储时迁移数据
+  saveState();
 });
 
 function updateApiKeyWarn() {
