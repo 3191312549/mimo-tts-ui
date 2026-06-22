@@ -110,16 +110,27 @@ header h1 span { color: var(--accent); }
 .status-dot.idle { background: #555; }
 
 .save-local {
-  font-size: 11px;
-  color: var(--text2);
-  white-space: nowrap;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
   cursor: pointer;
-  user-select: none;
   display: flex;
   align-items: center;
-  gap: 3px;
+  justify-content: center;
+  transition: var(--transition);
+  flex-shrink: 0;
 }
-.save-local input { margin: 0; }
+.save-local:hover { border-color: var(--accent); }
+.save-local input { display: none; }
+.save-local::after {
+  content: '🔑';
+  font-size: 13px;
+  opacity: 0.4;
+  transition: var(--transition);
+}
+.save-local:has(input:checked) { border-color: var(--accent); background: var(--accent-dim); }
+.save-local:has(input:checked)::after { opacity: 1; }
 
 main {
   display: flex;
@@ -406,7 +417,7 @@ main {
   <div class="api-key-wrap">
     <div class="status-dot idle" id="statusDot" title="API 状态"></div>
     <input type="password" id="apiKey" placeholder="输入 API Key" autocomplete="off">
-    <label class="save-local" title="关闭后仍保留 API Key"><input type="checkbox" id="saveLocal" checked> 记住</label>
+    <label class="save-local" title="勾选：关闭浏览器后保留 Key｜取消：关闭即清除"><input type="checkbox" id="saveLocal" checked></label>
   </div>
 </header>
 
