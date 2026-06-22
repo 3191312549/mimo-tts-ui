@@ -484,7 +484,7 @@ const state = {
 // ── 持久化存储 ──
 function loadState() {
   try {
-    const saved = JSON.parse(localStorage.getItem('mimo_state'));
+    const saved = JSON.parse(sessionStorage.getItem('mimo_state'));
     if (saved) {
       if (saved.apiKey) { state.apiKey = saved.apiKey; dom.apiKey.value = saved.apiKey; }
       if (saved.serverUrl !== undefined) { state.serverUrl = saved.serverUrl; dom.serverUrl.value = saved.serverUrl; }
@@ -493,7 +493,7 @@ function loadState() {
 }
 function saveState() {
   try {
-    localStorage.setItem('mimo_state', JSON.stringify({
+    sessionStorage.setItem('mimo_state', JSON.stringify({
       apiKey: state.apiKey,
       serverUrl: state.serverUrl
     }));
